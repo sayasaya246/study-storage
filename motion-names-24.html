@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AIでアプリを作る時に使う、動きの名前24 - インタラクティブ図鑑</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', 'Noto Sans JP', sans-serif;
+      background-color: #f4f5f7;
+      color: #1f2937;
+      overflow-x: hidden;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* 1. リップルエフェクト */
+    .ripple-btn {
+      position: relative;
+      overflow: hidden;
+    }
+    .ripple-circle {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.55);
+      transform: scale(0);
+      animation: ripple-anim 0.6s linear;
+      pointer-events: none;
+    }
+    @keyframes ripple-anim {
+      to {
+        transform: scale(4);
+        opacity: 0;
+      }
+    }
+
+    /* 4. タイピングインジケーター */
+    .typing-dot {
+      animation: typing-bounce 1.4s infinite ease-in-out both;
+    }
+    .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes typing-bounce {
+      0%, 80%, 100% { transform: translateY(0) scale(0.8); opacity: 0.4; }
+      40% { transform: translateY(-5px) scale(1.1); opacity: 1; }
+    }
+
+    /* 13. スプリングアニメーション */
+    .spring-box {
+      transition: transform 0.65s cubic-bezier(0.34, 1.85, 0.64, 1);
+    }
+
+    /* 14. いいねのはじけ */
+    @keyframes heart-pop {
+      0% { transform: scale(1); }
+      35% { transform: scale(1.45); }
+      70% { transform: scale(0.9); }
+      100% { transform: scale(1); }
+    }
+    .heart-pop-anim {
+      animation: heart-pop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes particle-burst {
+      0% { transform: translate(0, 0) scale(1); opacity: 1; }
+      100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+    }
+    .like-particle {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      pointer-events: none;
+      animation: particle-burst 0.55s ease-out forwards;
+    }
+
+    /* 16. スケルトンシマー */
+    .skeleton-shimmer {
+      background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite linear;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* 18. シェイクアニメーション */
+    @keyframes shake-x {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-7px); }
+      40%, 80% { transform: translateX(7px); }
+    }
+    .shake-anim {
+      animation: shake-x 0.4s ease-in-out;
+    }
+
+    /* 20. スタッガーアニメーション */
+    .stagger-item {
+      opacity: 0;
+      transform: translateY(14px);
+      transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .stagger-item.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* 21. 丸く広がる切り替え (Circular Reveal) */
+    .circular-layer {
+      clip-path: circle(0% at var(--cx, 50%) var(--cy, 50%));
+      transition: clip-path 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .circular-layer.revealed {
+      clip-path: circle(150% at var(--cx, 50%) var(--cy, 50%));
+    }
+
+    /* カスタムスクロールバー非表示（タブ用） */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="pb-16">
+
+  <!-- コンパクトヘッダー -->
+  <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-xs">
+    <div class="max-w-7xl mx-auto px-3 sm:px-5 py-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+      <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <h1 class="text-lg sm:text-xl font-black text-gray-900 tracking-tight">
+          AIでアプリを作る時に使う、動きの名前<span class="text-red-600">24</span>
+        </h1>
+        <span class="text-xs text-gray-500 font-medium">1ページ全一覧・タップやドラッグで実際に動きます</span>
+      </div>
+
+      <!-- 検索ボックス -->
+      <div class="relative w-full sm:w-60">
+        <input
+          type="text"
+          id="searchInput"
+          placeholder="動きの名前で絞り込み..."
+          class="w-full pl-8 pr-3 py-1.5 text-xs bg-gray-100 border border-transparent focus:bg-white focus:border-red-500 rounded-lg outline-none transition"
+        />
+        <svg class="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+      </div>
+    </div>
+  </header>
+
+  <!-- メイン全一覧シート（①〜⑧カテゴリ×3列＝24項目を1ページ表示） -->
+  <main class="max-w-7xl mx-auto px-3 sm:px-5 pt-3.5">
+    <div id="sectionsContainer" class="space-y-4">
+      <!-- 8カテゴリ・24個のカードが1ページにすべてレンダリングされます -->
+    </div>
+  </main>
+
+  <!-- 7. グローバルトースト通知コンテナ -->
+  <div id="globalToastContainer" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none w-full max-w-xs px-4"></div>
+
+  <!-- 8. ボトムシートオーバーレイ -->
+  <div id="bottomSheetOverlay" class="fixed inset-0 bg-black/40 z-40 opacity-0 pointer-events-none transition-opacity duration-300" onclick="closeBottomSheet()"></div>
+  <div id="bottomSheetPanel" class="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-2xl transform translate-y-full transition-transform duration-300 ease-out max-w-lg mx-auto p-6">
+    <div class="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4"></div>
+    <h3 class="text-lg font-bold text-gray-900 mb-1">ボトムシート (Bottom Sheet)</h3>
+    <p class="text-sm text-gray-500 mb-4">下から板がせり上がる動きです。追加の選択肢や詳細メニューを表示するのに最適です。</p>
+    <div class="space-y-2 mb-5">
+      <button onclick="showToast('「共有する」を選択しました'); closeBottomSheet();" class="w-full text-left px-4 py-3 rounded-xl bg-gray-50 hover:bg-gray-100 font-medium text-sm flex items-center justify-between">
+        <span>リンクを共有する</span>
+        <span class="text-gray-400">→</span>
+      </button>
+      <button onclick="showToast('「お気に入りに追加」を選択しました'); closeBottomSheet();" class="w-full text-left px-4 py-3 rounded-xl bg-gray-50 hover:bg-gray-100 font-medium text-sm flex items-center justify-between">
+        <span>お気に入りに追加</span>
+        <span class="text-gray-400">★</span>
+      </button>
+    </div>
+    <button onclick="closeBottomSheet()" class="w-full py-3 bg-gray-900 text-white font-bold rounded-xl text-sm">閉じる</button>
+  </div>
+
+  <!-- 9. ナビゲーションドロワーオーバーレイ -->
+  <div id="drawerOverlay" class="fixed inset-0 bg-black/40 z-40 opacity-0 pointer-events-none transition-opacity duration-300" onclick="closeDrawer()"></div>
+  <aside id="drawerPanel" class="fixed top-0 bottom-0 left-0 w-72 z-50 bg-white shadow-2xl transform -translate-x-full transition-transform duration-300 ease-out p-6 flex flex-col justify-between">
+    <div>
+      <div class="flex items-center justify-between pb-4 border-b border-gray-100">
+        <span class="font-black text-lg text-gray-900">メニュー (Drawer)</span>
+        <button onclick="closeDrawer()" class="p-2 rounded-lg hover:bg-gray-100 text-gray-500">✕</button>
+      </div>
+      <nav class="mt-4 space-y-1.5">
+        <button onclick="showToast('ホームへ移動'); closeDrawer();" class="w-full text-left px-3 py-2.5 rounded-xl bg-red-50 text-red-600 font-bold text-sm">🏠 ホーム</button>
+        <button onclick="showToast('プロフィールへ移動'); closeDrawer();" class="w-full text-left px-3 py-2.5 rounded-xl hover:bg-gray-100 text-gray-700 font-medium text-sm">👤 プロフィール</button>
+        <button onclick="showToast('設定へ移動'); closeDrawer();" class="w-full text-left px-3 py-2.5 rounded-xl hover:bg-gray-100 text-gray-700 font-medium text-sm">⚙️ アプリ設定</button>
+      </nav>
+    </div>
+    <div class="text-xs text-gray-400 border-t pt-4">
+      横からメニューがすべり出る定番ナビゲーションです。
+    </div>
+  </aside>
+
+  <!-- 19. 共有要素トランジション用モーダル -->
+  <div id="sharedElementModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300 flex items-center justify-center p-4" onclick="closeSharedElement()">
+    <div id="sharedElementCard" class="bg-white rounded-3xl overflow-hidden max-w-sm w-full shadow-2xl transform scale-75 transition-transform duration-300 ease-out" onclick="event.stopPropagation()">
+      <div class="h-48 bg-gradient-to-tr from-rose-500 via-red-500 to-amber-500 flex items-center justify-center text-white relative">
+        <svg class="w-20 h-20 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+        </svg>
+        <button onclick="closeSharedElement()" class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/30 text-white flex items-center justify-center text-sm">✕</button>
+      </div>
+      <div class="p-5">
+        <span class="text-xs font-bold text-red-600 uppercase tracking-wider">Shared Element Transition</span>
+        <h4 class="text-lg font-bold text-gray-900 mt-1">写真がそのまま拡大して遷移</h4>
+        <p class="text-sm text-gray-600 mt-2">一覧のサムネイルと詳細画面のメイン画像を連続的につなぐことで、画面が切り替わっても文脈が途切れません。</p>
+        <button onclick="closeSharedElement()" class="mt-4 w-full py-2.5 bg-gray-900 text-white rounded-xl text-sm font-bold">元のカードに戻る</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 23. 長押しメニュー (Context Menu) オーバーレイ -->
+  <div id="contextMenuOverlay" class="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-200 flex items-center justify-center p-4" onclick="closeContextMenu()">
+    <div id="contextMenuBox" class="transform scale-90 transition-transform duration-200 max-w-xs w-full space-y-3" onclick="event.stopPropagation()">
+      <!-- 浮き上がったカード -->
+      <div class="bg-white rounded-2xl p-4 shadow-2xl border border-gray-100">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center font-bold">★</div>
+          <div>
+            <div class="font-bold text-gray-900 text-sm">選択中のアイテム</div>
+            <div class="text-xs text-gray-500">長押しで浮き上がりました</div>
+          </div>
+        </div>
+      </div>
+      <!-- ポップアップメニュー -->
+      <div class="bg-white/95 backdrop-blur rounded-2xl shadow-xl overflow-hidden divide-y divide-gray-100 text-sm font-medium">
+        <button onclick="showToast('予約するをタップしました'); closeContextMenu();" class="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center justify-between text-gray-800">
+          <span>📅 予約する</span>
+          <span class="text-xs text-gray-400">Action</span>
+        </button>
+        <button onclick="showToast('お気に入りに登録しました'); closeContextMenu();" class="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center justify-between text-gray-800">
+          <span>❤️ お気に入り</span>
+          <span class="text-xs text-gray-400">Favorite</span>
+        </button>
+        <button onclick="closeContextMenu()" class="w-full px-4 py-3 text-left hover:bg-red-50 text-red-600 font-bold">
+          キャンセル
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // データ定義：全8カテゴリ・24種類のUIモーション
+    // ==========================================
+    const CATEGORIES = [
+      { id: '1', num: '1', label: '押した手応え' },
+      { id: '2', num: '2', label: '待つ間' },
+      { id: '3', num: '3', label: '出す・しまう' },
+      { id: '4', num: '4', label: '指で動かす' },
+      { id: '5', num: '5', label: 'ばねとごほうび' },
+      { id: '6', num: '6', label: '気が利く見せ方' },
+      { id: '7', num: '7', label: '画面をつなぐ' },
+      { id: '8', num: '8', label: 'つかんで動かす' },
+    ];
+
+    const MOTIONS = [
+      // ① 押した手応え
+      {
+        id: 1,
+        cat: '1',
+        ja: 'リップル',
+        en: 'ripple effect',
+        desc: '押した所から波紋が広がる。押せた合図に。',
+        prompt: 'ボタンを押した座標から水の波紋が広がるリップルエフェクト（ripple effect）を実装してください。',
+        renderDemo: () => `
+          <div class="flex items-center justify-center h-full">
+            <button onpointerdown="triggerRipple(event, this)" class="ripple-btn bg-gray-900 text-white text-xs font-bold px-5 py-2 rounded-full shadow-sm active:scale-95 transition-transform select-none">
+              予約する（押す）
+            </button>
+          </div>
+        `
+      },
+      {
+        id: 2,
+        cat: '1',
+        ja: 'トグル',
+        en: 'toggle switch',
+        desc: 'つまみがすべる。オンとオフの切り替えに。',
+        prompt: 'つまみが滑らかにスライドしてオン・オフを切り替えるトグルスイッチ（toggle switch）を作ってください。',
+        renderDemo: () => `
+          <div class="flex items-center justify-center h-full gap-3">
+            <button id="demoToggleBtn" onclick="toggleSwitchDemo()" role="switch" aria-checked="true" class="w-12 h-7 bg-red-600 rounded-full p-1 transition-colors duration-300 flex items-center cursor-pointer shadow-inner">
+              <span id="demoToggleKnob" class="w-5 h-5 bg-white rounded-full shadow transform translate-x-5 transition-transform duration-300 ease-out"></span>
+            </button>
+            <span id="demoToggleLabel" class="font-bold text-xs text-gray-800 w-14">通知 ON</span>
+          </div>
+        `
+      },
+      {
+        id: 3,
+        cat: '1',
+        ja: 'ローディングボタン',
+        en: 'loading button',
+        desc: '押すと、くるくる→チェックに変わる。',
+        prompt: 'クリックするとローディングスピナーに変化し、完了後にチェックマークへ変わるローディングボタン（loading button）を作ってください。',
+        renderDemo: () => `
+          <div class="flex items-center justify-center h-full">
+            <button id="demoLoadingBtn" onclick="triggerLoadingBtn()" class="bg-gray-900 hover:bg-gray-800 text-white text-xs font-bold px-4 py-2 rounded-full shadow-sm transition-all duration-300 flex items-center justify-center gap-1.5 min-w-[120px]">
+              <span>送信する</span>
+            </button>
+          </div>
+        `
+      },
+
+      // ② 待つ間
+      {
+        id: 4,
+        cat: '2',
+        ja: 'タイピングインジケーター',
+        en: 'typing indicator',
+        desc: '入力中の「…」。相手やAIが考えている合図。',
+        prompt: 'チャットでAIや相手が入力中であることを示す、3つの点が波打つタイピングインジケーター（typing indicator）を作ってください。',
+        renderDemo: () => `
+          <div class="flex items-center justify-center h-full gap-2">
+            <span class="bg-gray-900 text-white text-[10px] font-bold px-2.5 py-1 rounded-full">AI思考中</span>
+            <div class="bg-white border border-gray-200 px-3 py-2 rounded-2xl rounded-tl-sm shadow-2xs flex items-center gap-1">
+              <span class="typing-dot w-1.5 h-1.5 bg-gray-600 rounded-full"></span>
+              <span class="typing-dot w-1.5 h-1.5 bg-gray-600 rounded-full"></span>
+              <span class="typing-dot w-1.5 h-1.5 bg-gray-600 rounded-full"></span>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: 5,
+        cat: '2',
+        ja: 'スピナー',
+        en: 'spinner',
+        desc: 'くるくる回る輪。短い待ちに。',
+        prompt: '短い読み込み時間を示す、滑らかに回転するリング状のスピナー（spinner）を実装してください。',
+        renderDemo: () => `
+          <div class="flex items-center justify-center h-full gap-3">
+            <div class="w-7 h-7 border-[3px] border-gray-200 border-t-red-600 rounded-full animate-spin"></div>
+            <span class="text-xs text-gray-500 font-medium">読み込み中...</span>
+          </div>
+        `
+      },
+      {
+        id: 6,
+        cat: '2',
+        ja: 'プログレスバー',
+        en: 'progress bar',
+        desc: '進み具合が見える。長い待ちに。',
+        prompt: '処理の進捗率がパーセンテージとバーの長さで視覚的にわかるプログレスバー（progress bar）を作ってください。',
+        renderDemo: () => `
+          <div class="flex flex-col justify-center h-full px-2 gap-1.5">
+            <div class="flex justify-between items-center text-[11px] font-bold">
+              <span id="demoProgressText" class="text-red-600">75%</span>
+              <button onclick="runProgressDemo()" class="text-[10px] text-gray-500 hover:text-gray-900 underline">再再生</button>
+            </div>
+            <div class="w-full h-2.5 bg-gray-200 rounded-full overflow-hidden">
+              <div id="demoProgressFill" class="h-full bg-red-600 rounded-full transition-all duration-300" style="width: 75%"></div>
+            </div>
+          </div>
+        `
+      },
+
+      // ③ 出す・しまう
+      {
+        id: 7,
+        cat: '3',
+        ja: 'トースト',
+        en: 'toast',
+        desc: '下にふっと出て、数秒で消える知らせ。',
+        prompt: '画面下部にふっと浮かび上がり、数秒後に自動で消えるトースト通知（toast）を実装してください。',
+        renderDemo: () => `
+          <div class="flex items-center justify-center h-full">
+            <button onclick="showToast('✅ 保存しました！')" class="bg-white border border-gray-300 hover:border-gray-900 text-gray-800 font-bold text-xs px-3.5 py-1.5 rounded-lg shadow-2xs active:scale-95 transition">
+              通知を出す
+            </button>
+          </div>
+        `
+      },
+      {
+        id: 8,
+        cat: '3',
+        ja: 'ボトムシート',
+        en: 'bottom sheet',
+        desc: '下から板がせり上がる。追加の選択に。',
+        prompt: '画面下端からパネルがせり上がり、背景が暗くなるボトムシート（bottom sheet）を作ってください。',
+        renderDemo: () => `
+          <div class="flex items-center justify-center h-full">
+            <button onclick="openBottomSheet()" class="bg-white border border-gray-300 hover:border-gray-900 text-gray-800 font-bold text-xs px-3.5 py-1.5 rounded-lg shadow-2xs active:scale-95 transition">
+              下から開く ▲
+            </button>
+          </div>
+        `
+      },
+      {
+        id: 9,
+        cat: '3',
+        ja: 'ドロワー',
+        en: 'navigation drawer',
+        desc: '横からメニューがすべり出る。',
+        prompt: '画面の左端からスライドして出てくるナビゲーションドロワー（navigation drawer）を実装してください。',
+        renderDemo: () => `
+          <div class="flex items-center justify-center h-full">
+            <button onclick="openDrawer()" class="bg-white border border-gray-300 hover:border-gray-900 text-gray-800 font-bold text-xs px-3.5 py-1.5 rounded-lg shadow-2xs active:scale-95 transition flex items-center gap-1.5">
+              <span>☰</span> メニューを開く
+            </button>
+          </div>
+        `
+      },
+
+      // ④ 指で動かす
+      {
+        id: 10,
+        cat: '4',
+        ja: 'プルトゥリフレッシュ',
+        en: 'pull to refresh',
+        desc: '下に引くと、新しい中身に更新される。',
+        prompt: 'リストを下に引っ張って離すとデータが最新に更新されるプルトゥリフレッシュ（pull to refresh）を作ってください。',
+        renderDemo: () => `
+          <div id="ptrContainer" class="relative h-full w-full overflow-hidden rounded-lg bg-white border border-gray-200 select-none cursor-grab active:cursor-grabbing flex flex-col">
+            <div id="ptrIndicator" class="h-0 overflow-hidden bg-red-50 flex items-center justify-center text-[10px] font-bold text-red-600 transition-all duration-150">
+              ↓ 引っ張って更新
+            </div>
+            <div id="ptrContent" class="flex-1 px-2 flex flex-col justify-center items-center text-center">
+              <div id="ptrStatusText" class="text-[11px] font-bold text-gray-700">↓ 下に引っ張って更新</div>
+              <div id="ptrTimeText" class="text-[10px] text-gray-400">更新: たった今</div>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: 11,
+        cat: '4',
+        ja: 'スワイプアクション',
+        en: 'swipe actions',
+        desc: '横にずらすと「削除」が出る。',
+        prompt: 'リスト項目を左にスワイプすると背後に赤い「削除」ボタンが現れるスワイプアクション（swipe actions）を作ってください。',
+        renderDemo: () => `
+          <div class="flex items-center h-full">
+            <div class="relative w-full h-10 rounded-lg overflow-hidden bg-red-600 flex items-center justify-end pr-2.5 select-none">
+              <button onclick="resetSwipeDemo()" class="text-white font-bold text-[11px] px-1.5 py-0.5">削除</button>
+              <div id="swipeItem" class="absolute inset-0 bg-white border border-gray-200 rounded-lg px-2.5 flex items-center justify-between cursor-grab active:cursor-grabbing transition-transform duration-200">
+                <span class="text-[11px] font-bold text-gray-700">← 左へスワイプ</span>
+                <span class="text-gray-400 text-xs">≡</span>
+              </div>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: 12,
+        cat: '4',
+        ja: 'カルーセル',
+        en: 'carousel',
+        desc: '横に送る。下の点が今の位置。',
+        prompt: '横にスライドして切り替えられ、下部のインジケータードットで現在位置がわかるカルーセル（carousel）を作ってください。',
+        renderDemo: () => `
+          <div class="flex flex-col items-center justify-center h-full gap-1">
+            <div class="relative w-full h-11 overflow-hidden rounded-lg bg-white border border-gray-200 flex items-center">
+              <div id="carouselTrack" class="flex w-full h-full transition-transform duration-300 ease-out">
+                <div class="w-full shrink-0 h-full bg-rose-50 flex items-center justify-center font-bold text-[11px] text-rose-700">1 / 3</div>
+                <div class="w-full shrink-0 h-full bg-amber-50 flex items-center justify-center font-bold text-[11px] text-amber-700">2 / 3</div>
+                <div class="w-full shrink-0 h-full bg-emerald-50 flex items-center justify-center font-bold text-[11px] text-emerald-700">3 / 3</div>
+              </div>
+              <button onclick="moveCarousel(-1)" class="absolute left-1 w-5 h-5 rounded-full bg-white/90 shadow text-[11px] font-bold flex items-center justify-center">‹</button>
+              <button onclick="moveCarousel(1)" class="absolute right-1 w-5 h-5 rounded-full bg-white/90 shadow text-[11px] font-bold flex items-center justify-center">›</button>
+            </div>
+            <div id="carouselDots" class="flex gap-1">
+              <span class="w-3.5 h-1.5 rounded-full bg-red-600 transition-all"></span>
+              <span class="w-1.5 h-1.5 rounded-full bg-gray-300 transition-all"></span>
+              <span class="w-1.5 h-1.5 rounded-full bg-gray-300 transition-all"></span>
+            </div>
+          </div>
+        `
+      },
+
+      // ⑤ ばねとごほうび
+      {
+        id: 13,
+        cat: '5',
+        ja: 'スプリング',
+        en: 'spring animation',
+        desc: '行きすぎて戻る、ばねの動き。出すときに。',
+        prompt: '目標位置を少し行き過ぎてから弾力を持って戻るスプリングアニメーション（spring animation）を実装してください。',
+        renderDemo: () => `
+          <div class="flex items-center h-full gap-2 px-1">
+            <div id="springTrack" class="flex-1 h-8 bg-white rounded-lg border border-gray-200 px-1.5 flex items-center overflow-hidden">
+              <div id="springTarget" class="spring-box w-5 h-5 bg-gray-900 rounded-md shadow-xs"></div>
+            </div>
+            <button onclick="triggerSpringDemo()" class="shrink-0 text-[11px] font-bold bg-white border border-gray-300 px-2.5 py-1.5 rounded-lg hover:border-gray-900">
+              動かす
+            </button>
+          </div>
+        `
+      },
+      {
+        id: 14,
+        cat: '5',
+        ja: 'いいねのはじけ',
+        en: 'like animation',
+        desc: 'ハートがはじける。小さなごほうびに。',
+        prompt: 'タップするとハートが弾むように拡大し、周囲に小さな光の粒が弾け飛ぶいいねアニメーション（like animation）を作ってください。',
+        renderDemo: () => `
+          <div class="flex items-center justify-center h-full gap-2.5">
+            <button id="likeHeartBtn" onclick="triggerLikeBurst(this)" class="relative w-10 h-10 rounded-full bg-white border border-gray-200 shadow-2xs flex items-center justify-center text-xl select-none active:scale-90 transition">
+              <span id="likeHeartIcon" class="text-gray-300 transition-colors">♥</span>
+            </button>
+            <span class="text-[11px] text-gray-500">タップで弾ける</span>
+          </div>
+        `
+      },
+      {
+        id: 15,
+        cat: '5',
+        ja: 'コンフェッティ',
+        en: 'confetti',
+        desc: '紙吹雪が舞う。完了を祝うときに。',
+        prompt: 'タスク完了や達成時に画面いっぱいにカラフルな紙吹雪が舞うコンフェッティ（confetti）演出を作ってください。',
+        renderDemo: () => `
+          <div class="flex items-center justify-center h-full">
+            <button onclick="triggerConfetti(event)" class="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-4 py-1.5 rounded-full shadow-xs active:scale-95 transition flex items-center gap-1">
+              <span>🎉</span> 完了を祝う
+            </button>
+          </div>
+        `
+      },
+
+      // ⑥ 気が利く見せ方
+      {
+        id: 16,
+        cat: '6',
+        ja: 'スケルトン',
+        en: 'skeleton screen',
+        desc: '中身の形を先に出す。待ちが短く感じる。',
+        prompt: 'データ読み込み中にコンテンツの枠組みをグレーのシマー効果で先に表示するスケルトンスクリーン（skeleton screen）を作ってください。',
+        renderDemo: () => `
+          <div onclick="toggleSkeletonDemo()" title="タップで読み込み完了/待機を切替" class="flex items-center h-full cursor-pointer">
+            <div id="skeletonView" class="w-full bg-white p-2 rounded-lg border border-gray-200 flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-md skeleton-shimmer shrink-0"></div>
+              <div class="flex-1 space-y-1.5">
+                <div class="h-2.5 w-3/4 rounded skeleton-shimmer"></div>
+                <div class="h-2 w-1/2 rounded skeleton-shimmer"></div>
+              </div>
+              <span class="text-[10px] text-gray-400 shrink-0">切替</span>
+            </div>
+            <div id="loadedView" class="hidden w-full bg-white p-2 rounded-lg border border-gray-200 flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-md bg-red-100 text-red-600 flex items-center justify-center text-xs font-bold shrink-0">UI</div>
+              <div class="flex-1 min-w-0">
+                <div class="text-[11px] font-bold text-gray-800 truncate">読み込み完了</div>
+                <div class="text-[10px] text-gray-500 truncate">タップでスケルトンへ</div>
+              </div>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: 17,
+        cat: '6',
+        ja: 'フローティングラベル',
+        en: 'floating label',
+        desc: '入力欄の見出しが、上へ小さく逃げる。',
+        prompt: '入力欄をタップまたは文字入力すると、プレースホルダーのラベルが縮小して枠の上部へ移動するフローティングラベル（floating label）を作ってください。',
+        renderDemo: () => `
+          <div class="flex items-center justify-center h-full">
+            <div class="relative w-full">
+              <input
+                type="email"
+                id="floatingInput"
+                placeholder=" "
+                class="peer w-full px-2.5 pt-3.5 pb-1 text-xs bg-white border border-gray-300 rounded-lg outline-none focus:border-red-600 transition"
+              />
+              <label
+                for="floatingInput"
+                class="absolute left-2.5 top-0.5 text-[9px] font-bold text-red-600 transition-all peer-placeholder-shown:top-2.5 peer-placeholder-shown:text-xs peer-placeholder-shown:text-gray-400 peer-placeholder-shown:font-normal peer-focus:top-0.5 peer-focus:text-[9px] peer-focus:text-red-600 peer-focus:font-bold pointer-events-none"
+              >
+                メールアドレスを入力
+              </label>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: 18,
+        cat: '6',
+        ja: 'シェイク',
+        en: 'shake animation',
+        desc: 'まちがえると横に震える。エラーの合図に。',
+        prompt: '入力エラーやパスワード間違いのときに、フォームが左右に小刻みに震えるシェイクアニメーション（shake animation）を作ってください。',
+        renderDemo: () => `
+          <div class="flex items-center justify-center h-full">
+            <div id="shakeBox" class="w-full flex items-center gap-1.5">
+              <input type="password" value="12345" readonly class="w-full px-2.5 py-1 text-xs bg-white border border-red-400 rounded-lg text-gray-700 outline-none" />
+              <button onclick="triggerShakeDemo()" class="shrink-0 bg-red-600 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg">確認</button>
+            </div>
+          </div>
+        `
+      },
+
+      // ⑦ 画面をつなぐ
+      {
+        id: 19,
+        cat: '7',
+        ja: '共有要素トランジション',
+        en: 'shared element',
+        desc: '写真がそのまま大きくなって、次の画面へ。',
+        prompt: 'サムネイルカードをタップすると、その要素がシームレスに拡大して詳細画面へつながる共有要素トランジション（shared element transition）を作ってください。',
+        renderDemo: () => `
+          <div class="flex items-center justify-center h-full">
+            <button onclick="openSharedElement()" class="group flex items-center gap-2.5 bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-2xs hover:border-red-400 transition text-left">
+              <div class="w-8 h-8 rounded-md bg-gradient-to-tr from-rose-500 to-amber-500 flex items-center justify-center text-white text-sm group-hover:scale-105 transition-transform">
+                🖼️
+              </div>
+              <span class="text-xs font-bold text-gray-800">拡大して遷移</span>
+            </button>
+          </div>
+        `
+      },
+      {
+        id: 20,
+        cat: '7',
+        ja: 'スタッガー',
+        en: 'stagger animation',
+        desc: '少しずつずらして順に出す。一覧がそろう。',
+        prompt: 'リストやカードの複数要素を、少しずつ時間差（50〜100msずつ）をつけて順番にフェードインさせるスタッガーアニメーション（stagger animation）を作ってください。',
+        renderDemo: () => `
+          <div class="flex items-center h-full gap-2">
+            <div id="staggerList" class="flex-1 space-y-1">
+              <div class="stagger-item show h-3 bg-white border border-gray-200 rounded px-1.5 flex items-center text-[9px] text-gray-500">Item 1</div>
+              <div class="stagger-item show h-3 bg-white border border-gray-200 rounded px-1.5 flex items-center text-[9px] text-gray-500">Item 2</div>
+              <div class="stagger-item show h-3 bg-white border border-gray-200 rounded px-1.5 flex items-center text-[9px] text-gray-500">Item 3</div>
+            </div>
+            <button onclick="triggerStaggerDemo()" class="shrink-0 text-[11px] font-bold bg-white border border-gray-300 px-2 py-1 rounded-lg hover:border-gray-900">再生</button>
+          </div>
+        `
+      },
+      {
+        id: 21,
+        cat: '7',
+        ja: '丸く広がる切り替え',
+        en: 'circular reveal',
+        desc: '押した所から円が広がって、次の画面に。',
+        prompt: 'タップした位置を中心に円形のマスクが拡大して次の画面へ切り替わるサーキュラーリビール（circular reveal）を作ってください。',
+        renderDemo: () => `
+          <div id="circularBox" onclick="triggerCircularReveal(event)" class="relative w-full h-full rounded-lg bg-white border border-gray-200 flex items-center justify-center cursor-pointer overflow-hidden select-none">
+            <span class="text-xs font-bold text-gray-700">ここをタップ！</span>
+            <div id="circularDarkLayer" class="circular-layer absolute inset-0 bg-gray-900 text-white flex items-center justify-center font-bold text-xs">
+              新しい画面に切替完了
+            </div>
+          </div>
+        `
+      },
+
+      // ⑧ つかんで動かす
+      {
+        id: 22,
+        cat: '8',
+        ja: 'ドラッグで並べ替え',
+        en: 'drag to reorder',
+        desc: '長押しでつかんで、順番を入れ替える。',
+        prompt: 'リスト項目をドラッグして直感的に上下の順番を入れ替えられるドラッグ＆ドロップ並べ替え（drag to reorder）を実装してください。',
+        renderDemo: () => `
+          <div id="reorderList" class="flex flex-col justify-center h-full gap-1 select-none">
+            <div onclick="swapOrderDemo(this)" class="bg-white border border-gray-200 hover:border-red-400 px-2.5 py-0.5 rounded text-[11px] font-bold text-gray-700 flex justify-between items-center cursor-pointer transition">
+              <span>1. タスク A</span>
+              <span class="text-gray-400 text-[10px]">入替 ⇅</span>
+            </div>
+            <div onclick="swapOrderDemo(this)" class="bg-white border border-gray-200 hover:border-red-400 px-2.5 py-0.5 rounded text-[11px] font-bold text-gray-700 flex justify-between items-center cursor-pointer transition">
+              <span>2. タスク B</span>
+              <span class="text-gray-400 text-[10px]">入替 ⇅</span>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: 23,
+        cat: '8',
+        ja: '長押しメニュー',
+        en: 'context menu',
+        desc: '長押しで浮き上がり、まわりがぼけてメニュー。',
+        prompt: '要素を長押しすると対象カードが浮き上がり、背景にぼかしがかかって操作メニューが表示されるコンテキストメニュー（context menu）を作ってください。',
+        renderDemo: () => `
+          <div class="flex items-center justify-center h-full">
+            <button
+              onpointerdown="startLongPress()"
+              onpointerup="cancelLongPress()"
+              onpointerleave="cancelLongPress()"
+              onclick="openContextMenu()"
+              class="bg-white border border-gray-300 hover:border-gray-900 px-3.5 py-1.5 rounded-lg shadow-2xs text-xs font-bold text-gray-800 select-none active:scale-95 transition"
+            >
+              長押しでメニュー
+            </button>
+          </div>
+        `
+      },
+      {
+        id: 24,
+        cat: '8',
+        ja: 'ラバーバンド',
+        en: 'rubber band',
+        desc: '端まで行くと、ゴムのように伸びて戻る。',
+        prompt: 'スクロールの端に達したあとさらに引っ張ると、ゴムのように抵抗感を持って伸び、離すと弾力で戻るラバーバンド効果（rubber band）を作ってください。',
+        renderDemo: () => `
+          <div id="rubberContainer" class="w-full h-full flex items-center justify-center overflow-hidden select-none cursor-grab active:cursor-grabbing">
+            <div id="rubberBox" class="bg-white border border-gray-300 px-3.5 py-1.5 rounded-lg shadow-2xs text-xs font-bold text-gray-700">
+              ← 左右に引っ張る →
+            </div>
+          </div>
+        `
+      }
+    ];
+
+    // ==========================================
+    // 状態管理と1ページ全一覧レンダリング
+    // ==========================================
+    let searchQuery = '';
+
+    function init() {
+      renderAllSections();
+      setupInteractiveListeners();
+    }
+
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      searchQuery = e.target.value.trim().toLowerCase();
+      renderAllSections();
+      setupInteractiveListeners();
+    });
+
+    function renderAllSections() {
+      const container = document.getElementById('sectionsContainer');
+      let totalMatched = 0;
+
+      const html = CATEGORIES.map(cat => {
+        const items = MOTIONS.filter(m => {
+          if (m.cat !== cat.id) return false;
+          if (!searchQuery) return true;
+          return (
+            m.ja.toLowerCase().includes(searchQuery) ||
+            m.en.toLowerCase().includes(searchQuery) ||
+            m.desc.toLowerCase().includes(searchQuery)
+          );
+        });
+
+        if (items.length === 0) return '';
+        totalMatched += items.length;
+
+        return `
+          <section>
+            <!-- カテゴリ見出し（①〜⑧） -->
+            <div class="flex items-center gap-1.5 mb-2">
+              <span class="w-5 h-5 rounded-full bg-red-600 text-white text-[11px] font-black flex items-center justify-center shadow-2xs">${cat.num}</span>
+              <h2 class="text-sm font-black text-gray-800 tracking-tight">${cat.label}</h2>
+            </div>
+
+            <!-- 3列グリッド（1ページにすべて整然と表示） -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              ${items.map(m => `
+                <article class="bg-white rounded-xl border border-gray-200/90 shadow-2xs hover:shadow-md transition-shadow p-2.5 flex flex-col justify-between">
+                  <div>
+                    <!-- カード上部：番号とAI指示文コピー -->
+                    <div class="flex items-center justify-between gap-1 mb-1.5">
+                      <span class="text-xs font-black text-red-600">${m.id}</span>
+                      <button
+                        onclick="copyPrompt(${m.id})"
+                        title="AIに指示するためのプロンプトをコピー"
+                        class="text-[10px] font-bold text-gray-500 hover:text-red-600 bg-gray-100 hover:bg-red-50 px-2 py-0.5 rounded transition flex items-center gap-1"
+                      >
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                        <span>指示コピー</span>
+                      </button>
+                    </div>
+
+                    <!-- コンパクト実演エリア -->
+                    <div class="h-16 bg-gray-50/90 border border-gray-200/70 rounded-lg px-2 py-1.5 mb-2 relative overflow-hidden">
+                      ${m.renderDemo()}
+                    </div>
+
+                    <!-- タイトル・英語名・説明 -->
+                    <div class="flex flex-wrap items-baseline gap-x-2">
+                      <h3 class="text-sm font-black text-gray-900 leading-snug">${m.ja}</h3>
+                      <span class="text-[11px] font-bold text-red-600">${m.en}</span>
+                    </div>
+                    <p class="text-[11px] text-gray-500 mt-0.5 leading-snug">${m.desc}</p>
+                  </div>
+                </article>
+              `).join('')}
+            </div>
+          </section>
+        `;
+      }).join('');
+
+      if (totalMatched === 0) {
+        container.innerHTML = `
+          <div class="py-12 text-center text-gray-400 text-sm">
+            該当する動きが見つかりませんでした。別のキーワードでお試しください。
+          </div>
+        `;
+      } else {
+        container.innerHTML = html;
+      }
+    }
+
+    // ==========================================
+    // 各インタラクションのロジック実装
+    // ==========================================
+
+    // 1. リップル
+    function triggerRipple(event, button) {
+      const rect = button.getBoundingClientRect();
+      const circle = document.createElement('span');
+      const diameter = Math.max(rect.width, rect.height);
+      const radius = diameter / 2;
+      circle.style.width = circle.style.height = `${diameter}px`;
+      circle.style.left = `${event.clientX - rect.left - radius}px`;
+      circle.style.top = `${event.clientY - rect.top - radius}px`;
+      circle.classList.add('ripple-circle');
+      const existing = button.querySelector('.ripple-circle');
+      if (existing) existing.remove();
+      button.appendChild(circle);
+    }
+
+    // 2. トグルスイッチ
+    let toggleState = true;
+    function toggleSwitchDemo() {
+      toggleState = !toggleState;
+      const btn = document.getElementById('demoToggleBtn');
+      const knob = document.getElementById('demoToggleKnob');
+      const label = document.getElementById('demoToggleLabel');
+      if (!btn) return;
+      if (toggleState) {
+        btn.classList.replace('bg-gray-300', 'bg-red-600');
+        knob.classList.add('translate-x-5');
+        label.textContent = '通知 ON';
+      } else {
+        btn.classList.replace('bg-red-600', 'bg-gray-300');
+        knob.classList.remove('translate-x-5');
+        label.textContent = '通知 OFF';
+      }
+    }
+
+    // 3. ローディングボタン
+    let loadingBusy = false;
+    function triggerLoadingBtn() {
+      if (loadingBusy) return;
+      loadingBusy = true;
+      const btn = document.getElementById('demoLoadingBtn');
+      btn.innerHTML = `<span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span><span>送信中...</span>`;
+      setTimeout(() => {
+        btn.classList.replace('bg-gray-900', 'bg-emerald-600');
+        btn.classList.replace('hover:bg-gray-800', 'hover:bg-emerald-700');
+        btn.innerHTML = `<span>✓ 送信完了</span>`;
+        setTimeout(() => {
+          btn.classList.replace('bg-emerald-600', 'bg-gray-900');
+          btn.classList.replace('hover:bg-emerald-700', 'hover:bg-gray-800');
+          btn.innerHTML = `<span>送信する</span>`;
+          loadingBusy = false;
+        }, 1400);
+      }, 1000);
+    }
+
+    // 6. プログレスバー
+    let progressTimer = null;
+    function runProgressDemo() {
+      const fill = document.getElementById('demoProgressFill');
+      const text = document.getElementById('demoProgressText');
+      if (!fill || !text) return;
+      clearInterval(progressTimer);
+      let val = 0;
+      fill.style.width = '0%';
+      text.textContent = '0%';
+      progressTimer = setInterval(() => {
+        val += Math.floor(Math.random() * 18) + 8;
+        if (val >= 100) {
+          val = 100;
+          clearInterval(progressTimer);
+        }
+        fill.style.width = val + '%';
+        text.textContent = val + '%';
+      }, 180);
+    }
+
+    // 7. トースト通知
+    function showToast(message) {
+      const container = document.getElementById('globalToastContainer');
+      const toast = document.createElement('div');
+      toast.className = 'bg-gray-900/95 text-white text-xs font-bold px-4 py-3 rounded-2xl shadow-xl transform translate-y-4 opacity-0 transition-all duration-300 text-center w-full';
+      toast.textContent = message;
+      container.appendChild(toast);
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-4', 'opacity-0');
+      });
+      setTimeout(() => {
+        toast.classList.add('translate-y-4', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
+      }, 2400);
+    }
+
+    // 8. ボトムシート
+    function openBottomSheet() {
+      const overlay = document.getElementById('bottomSheetOverlay');
+      const panel = document.getElementById('bottomSheetPanel');
+      overlay.classList.remove('opacity-0', 'pointer-events-none');
+      panel.classList.remove('translate-y-full');
+    }
+    function closeBottomSheet() {
+      const overlay = document.getElementById('bottomSheetOverlay');
+      const panel = document.getElementById('bottomSheetPanel');
+      overlay.classList.add('opacity-0', 'pointer-events-none');
+      panel.classList.add('translate-y-full');
+    }
+
+    // 9. ドロワー
+    function openDrawer() {
+      const overlay = document.getElementById('drawerOverlay');
+      const panel = document.getElementById('drawerPanel');
+      overlay.classList.remove('opacity-0', 'pointer-events-none');
+      panel.classList.remove('-translate-x-full');
+    }
+    function closeDrawer() {
+      const overlay = document.getElementById('drawerOverlay');
+      const panel = document.getElementById('drawerPanel');
+      overlay.classList.add('opacity-0', 'pointer-events-none');
+      panel.classList.add('-translate-x-full');
+    }
+
+    // 12. カルーセル
+    let carouselIndex = 0;
+    function moveCarousel(dir) {
+      carouselIndex = (carouselIndex + dir + 3) % 3;
+      const track = document.getElementById('carouselTrack');
+      const dots = document.getElementById('carouselDots')?.children;
+      if (!track || !dots) return;
+      track.style.transform = `translateX(-${carouselIndex * 100}%)`;
+      Array.from(dots).forEach((dot, idx) => {
+        if (idx === carouselIndex) {
+          dot.className = 'w-4 h-2 rounded-full bg-red-600 transition-all';
+        } else {
+          dot.className = 'w-2 h-2 rounded-full bg-gray-300 transition-all';
+        }
+      });
+    }
+
+    // 13. スプリング
+    let springRight = false;
+    function triggerSpringDemo() {
+      const box = document.getElementById('springTarget');
+      const track = document.getElementById('springTrack');
+      if (!box || !track) return;
+      springRight = !springRight;
+      const maxDist = Math.max(40, track.clientWidth - box.offsetWidth - 14);
+      box.style.transform = springRight ? `translateX(${maxDist}px)` : 'translateX(0px)';
+    }
+
+    // 14. いいねのはじけ
+    let liked = false;
+    function triggerLikeBurst(btn) {
+      liked = !liked;
+      const icon = document.getElementById('likeHeartIcon');
+      icon.classList.remove('heart-pop-anim');
+      void icon.offsetWidth;
+      icon.classList.add('heart-pop-anim');
+
+      if (liked) {
+        icon.classList.replace('text-gray-300', 'text-red-500');
+        // パーティクル生成
+        const colors = ['#ef4444', '#f59e0b', '#ec4899', '#3b82f6'];
+        for (let i = 0; i < 8; i++) {
+          const p = document.createElement('span');
+          p.className = 'like-particle';
+          p.style.backgroundColor = colors[i % colors.length];
+          const angle = (Math.PI * 2 * i) / 8;
+          const dist = 28 + Math.random() * 10;
+          p.style.setProperty('--tx', `${Math.cos(angle) * dist}px`);
+          p.style.setProperty('--ty', `${Math.sin(angle) * dist}px`);
+          btn.appendChild(p);
+          setTimeout(() => p.remove(), 600);
+        }
+      } else {
+        icon.classList.replace('text-red-500', 'text-gray-300');
+      }
+    }
+
+    // 15. コンフェッティ（紙吹雪）
+    function triggerConfetti(e) {
+      const colors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
+      const originX = e.clientX || window.innerWidth / 2;
+      const originY = e.clientY || window.innerHeight / 2;
+
+      for (let i = 0; i < 36; i++) {
+        const piece = document.createElement('div');
+        piece.style.position = 'fixed';
+        piece.style.left = originX + 'px';
+        piece.style.top = originY + 'px';
+        piece.style.width = '8px';
+        piece.style.height = '5px';
+        piece.style.backgroundColor = colors[i % colors.length];
+        piece.style.borderRadius = '2px';
+        piece.style.pointerEvents = 'none';
+        piece.style.zIndex = '9999';
+        document.body.appendChild(piece);
+
+        const vx = (Math.random() - 0.5) * 260;
+        const vy = -120 - Math.random() * 160;
+        const rot = Math.random() * 720;
+
+        piece.animate([
+          { transform: 'translate(0, 0) rotate(0deg)', opacity: 1 },
+          { transform: `translate(${vx}px, ${vy + 280}px) rotate(${rot}deg)`, opacity: 0 }
+        ], {
+          duration: 1100 + Math.random() * 400,
+          easing: 'cubic-bezier(0.25, 1, 0.5, 1)'
+        }).onfinish = () => piece.remove();
+      }
+      showToast('🎉 おめでとうございます！タスク完了！');
+    }
+
+    // 16. スケルトン切替
+    let isSkeleton = true;
+    function toggleSkeletonDemo() {
+      isSkeleton = !isSkeleton;
+      const sk = document.getElementById('skeletonView');
+      const ld = document.getElementById('loadedView');
+      if (!sk || !ld) return;
+      if (isSkeleton) {
+        sk.classList.remove('hidden');
+        ld.classList.add('hidden');
+      } else {
+        sk.classList.add('hidden');
+        ld.classList.remove('hidden');
+      }
+    }
+
+    // 18. シェイク
+    function triggerShakeDemo() {
+      const box = document.getElementById('shakeBox');
+      if (!box) return;
+      box.classList.remove('shake-anim');
+      void box.offsetWidth;
+      box.classList.add('shake-anim');
+      showToast('⚠️ パスワードが違います');
+    }
+
+    // 19. 共有要素トランジション
+    function openSharedElement() {
+      const modal = document.getElementById('sharedElementModal');
+      const card = document.getElementById('sharedElementCard');
+      modal.classList.remove('opacity-0', 'pointer-events-none');
+      card.classList.remove('scale-75');
+      card.classList.add('scale-100');
+    }
+    function closeSharedElement() {
+      const modal = document.getElementById('sharedElementModal');
+      const card = document.getElementById('sharedElementCard');
+      modal.classList.add('opacity-0', 'pointer-events-none');
+      card.classList.remove('scale-100');
+      card.classList.add('scale-75');
+    }
+
+    // 20. スタッガー
+    function triggerStaggerDemo() {
+      const items = document.querySelectorAll('#staggerList .stagger-item');
+      items.forEach(el => el.classList.remove('show'));
+      items.forEach((el, i) => {
+        setTimeout(() => {
+          el.classList.add('show');
+        }, 120 * (i + 1));
+      });
+    }
+
+    // 21. 丸く広がる切り替え
+    let circularRevealed = false;
+    function triggerCircularReveal(e) {
+      const box = document.getElementById('circularBox');
+      const layer = document.getElementById('circularDarkLayer');
+      if (!box || !layer) return;
+      const rect = box.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+      layer.style.setProperty('--cx', `${x}%`);
+      layer.style.setProperty('--cy', `${y}%`);
+      circularRevealed = !circularRevealed;
+      if (circularRevealed) {
+        layer.classList.add('revealed');
+      } else {
+        layer.classList.remove('revealed');
+      }
+    }
+
+    // 22. 並べ替えデモ
+    function swapOrderDemo(el) {
+      const list = document.getElementById('reorderList');
+      if (!list) return;
+      const items = Array.from(list.children);
+      if (items.length === 2) {
+        list.insertBefore(items[1], items[0]);
+        showToast('順番を入れ替えました');
+      }
+    }
+
+    // 23. 長押しメニュー
+    let longPressTimer = null;
+    function startLongPress() {
+      longPressTimer = setTimeout(() => {
+        openContextMenu();
+      }, 450);
+    }
+    function cancelLongPress() {
+      clearTimeout(longPressTimer);
+    }
+    function openContextMenu() {
+      const overlay = document.getElementById('contextMenuOverlay');
+      const box = document.getElementById('contextMenuBox');
+      overlay.classList.remove('opacity-0', 'pointer-events-none');
+      box.classList.remove('scale-90');
+      box.classList.add('scale-100');
+    }
+    function closeContextMenu() {
+      const overlay = document.getElementById('contextMenuOverlay');
+      const box = document.getElementById('contextMenuBox');
+      overlay.classList.add('opacity-0', 'pointer-events-none');
+      box.classList.remove('scale-100');
+      box.classList.add('scale-90');
+    }
+
+    // ==========================================
+    // ポインタードラッグ系（10: PTR, 11: Swipe, 24: Rubber Band）
+    // ==========================================
+    function setupInteractiveListeners() {
+      // 10. プルトゥリフレッシュ
+      const ptrContainer = document.getElementById('ptrContainer');
+      const ptrIndicator = document.getElementById('ptrIndicator');
+      const ptrTimeText = document.getElementById('ptrTimeText');
+      if (ptrContainer && ptrIndicator) {
+        let startY = 0;
+        let pulling = false;
+        ptrContainer.onpointerdown = (e) => {
+          startY = e.clientY;
+          pulling = true;
+          ptrContainer.setPointerCapture(e.pointerId);
+        };
+        ptrContainer.onpointermove = (e) => {
+          if (!pulling) return;
+          const dy = Math.max(0, Math.min(28, e.clientY - startY));
+          ptrIndicator.style.height = `${dy}px`;
+          ptrIndicator.textContent = dy > 18 ? '↑ 離して更新！' : '↓ 引っ張って更新';
+        };
+        ptrContainer.onpointerup = (e) => {
+          if (!pulling) return;
+          pulling = false;
+          const dy = e.clientY - startY;
+          if (dy > 18) {
+            ptrIndicator.textContent = '更新中...';
+            setTimeout(() => {
+              ptrIndicator.style.height = '0px';
+              const now = new Date();
+              ptrTimeText.textContent = `更新: ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+              showToast('🔄 最新の内容に更新しました');
+            }, 500);
+          } else {
+            ptrIndicator.style.height = '0px';
+          }
+        };
+      }
+
+      // 11. スワイプアクション
+      const swipeItem = document.getElementById('swipeItem');
+      if (swipeItem) {
+        let startX = 0;
+        let swiping = false;
+        swipeItem.onpointerdown = (e) => {
+          startX = e.clientX;
+          swiping = true;
+          swipeItem.style.transition = 'none';
+          swipeItem.setPointerCapture(e.pointerId);
+        };
+        swipeItem.onpointermove = (e) => {
+          if (!swiping) return;
+          const dx = Math.min(0, Math.max(-72, e.clientX - startX));
+          swipeItem.style.transform = `translateX(${dx}px)`;
+        };
+        swipeItem.onpointerup = (e) => {
+          if (!swiping) return;
+          swiping = false;
+          swipeItem.style.transition = 'transform 0.2s ease-out';
+          const dx = e.clientX - startX;
+          if (dx < -35) {
+            swipeItem.style.transform = 'translateX(-64px)';
+          } else {
+            swipeItem.style.transform = 'translateX(0px)';
+          }
+        };
+      }
+
+      // 24. ラバーバンド効果
+      const rubberContainer = document.getElementById('rubberContainer');
+      const rubberBox = document.getElementById('rubberBox');
+      if (rubberContainer && rubberBox) {
+        let startX = 0;
+        let dragging = false;
+        rubberContainer.onpointerdown = (e) => {
+          startX = e.clientX;
+          dragging = true;
+          rubberBox.style.transition = 'none';
+          rubberContainer.setPointerCapture(e.pointerId);
+        };
+        rubberContainer.onpointermove = (e) => {
+          if (!dragging) return;
+          const rawDx = e.clientX - startX;
+          // ゴムのような抵抗感（対数的に減衰）
+          const damped = Math.sign(rawDx) * Math.pow(Math.abs(rawDx), 0.72);
+          const scaleX = 1 + Math.min(0.18, Math.abs(damped) * 0.004);
+          rubberBox.style.transform = `translateX(${damped}px) scaleX(${scaleX})`;
+        };
+        rubberContainer.onpointerup = () => {
+          if (!dragging) return;
+          dragging = false;
+          rubberBox.style.transition = 'transform 0.5s cubic-bezier(0.34, 1.75, 0.64, 1)';
+          rubberBox.style.transform = 'translateX(0px) scaleX(1)';
+        };
+      }
+    }
+
+    function resetSwipeDemo() {
+      const swipeItem = document.getElementById('swipeItem');
+      if (swipeItem) {
+        swipeItem.style.transform = 'translateX(0px)';
+        showToast('🗑️ 削除アクションを実行しました（デモをリセット）');
+      }
+    }
+
+    // ==========================================
+    // AIプロンプトコピー機能
+    // ==========================================
+    function copyPrompt(id) {
+      const motion = MOTIONS.find(m => m.id === id);
+      if (!motion) return;
+      const textArea = document.createElement('textarea');
+      textArea.value = motion.prompt;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        showToast(`📋 「${motion.ja}」のAI指示文をコピーしました！`);
+      } catch (err) {
+        showToast('コピーに失敗しました');
+      }
+      document.body.removeChild(textArea);
+    }
+
+    // アプリ起動
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
