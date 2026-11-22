@@ -5,45 +5,150 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>勉強の成果物置き場</title>
   <style>
+    * { box-sizing: border-box; }
     body {
       font-family: "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
       background-color: #f7f3ea;
       color: #333;
       margin: 0;
-      padding: 24px 16px 48px;
     }
-    .wrap { max-width: 720px; margin: 0 auto; }
-    h1 { font-size: 22px; margin: 8px 0 4px; }
-    .sub { color: #777; font-size: 13px; margin-bottom: 24px; }
-    .item {
-      background: #fff;
-      border: 1px solid #e3dcc9;
-      border-radius: 12px;
-      padding: 16px 18px;
-      margin-bottom: 12px;
+
+    /* 上のバー */
+    header {
+      position: sticky;
+      top: 0;
+      background: #fffdf7;
+      border-bottom: 1px solid #e3dcc9;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 20;
     }
-    .item a {
-      color: #b03a1e;
+    #drawerBtn {
+      background: #a8542c;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-size: 15px;
       font-weight: bold;
-      font-size: 16px;
-      text-decoration: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
-    .item a:hover { text-decoration: underline; }
-    .date { color: #999; font-size: 12px; margin-top: 2px; }
-    .desc { font-size: 13px; color: #555; margin-top: 6px; line-height: 1.6; }
+    #drawerBtn:active { opacity: 0.85; }
+    header .site-name { font-size: 15px; font-weight: bold; color: #555; }
+
+    main { max-width: 720px; margin: 0 auto; padding: 32px 16px 48px; }
+    h1 { font-size: 22px; margin: 8px 0 12px; }
+    main p { font-size: 14px; line-height: 1.8; color: #555; }
+
+    /* ドロワーの背景 */
+    #drawerOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+      z-index: 40;
+    }
+    #drawerOverlay.open { opacity: 1; pointer-events: auto; }
+
+    /* ドロワー本体（左から出る） */
+    #drawerPanel {
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 300px;
+      max-width: 85vw;
+      background: #fff;
+      box-shadow: 2px 0 16px rgba(0, 0, 0, 0.2);
+      transform: translateX(-105%);
+      transition: transform 0.3s ease-out;
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+    }
+    #drawerPanel.open { transform: translateX(0); }
+    .drawer-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px;
+      border-bottom: 1px solid #eee;
+    }
+    .drawer-head .title { font-size: 16px; font-weight: bold; }
+    #drawerClose {
+      background: none;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      color: #777;
+      padding: 6px 10px;
+    }
+    .drawer-list { overflow-y: auto; padding: 8px; }
+    .drawer-item {
+      display: block;
+      padding: 12px;
+      border-radius: 10px;
+      text-decoration: none;
+      color: #333;
+    }
+    .drawer-item:hover { background: #f7f3ea; }
+    .drawer-item .name { font-size: 14px; font-weight: bold; line-height: 1.5; }
+    .drawer-item .date { font-size: 12px; color: #999; margin-top: 2px; }
+    .drawer-foot {
+      padding: 12px 16px;
+      border-top: 1px solid #eee;
+      font-size: 12px;
+      color: #999;
+      margin-top: auto;
+    }
   </style>
 </head>
 <body>
-  <div class="wrap">
+
+  <header>
+    <button id="drawerBtn" onclick="openDrawer()">☰ 成果物</button>
+    <span class="site-name">勉強の成果物置き場</span>
+  </header>
+
+  <main>
     <h1>勉強の成果物置き場</h1>
-    <p class="sub">勉強で作ったものを置いておく場所です。</p>
+    <p>勉強で作ったものを置いておく場所です。<br>
+    上の「☰ 成果物」ボタンを押すと、横から一覧が開きます。</p>
+  </main>
 
-    <div class="item">
-      <a href="motion-names-24.html">AIでアプリを作る時に使う、動きの名前24 — インタラクティブ図鑑</a>
-      <div class="date">2026年11月23日</div>
-      <p class="desc">タップやドラッグで実際に動く、24種類のUIモーションの図鑑。各項目にAIへの指示文のコピーボタン付き。</p>
+  <!-- ドロワー -->
+  <div id="drawerOverlay" onclick="closeDrawer()"></div>
+  <aside id="drawerPanel">
+    <div class="drawer-head">
+      <span class="title">成果物の一覧</span>
+      <button id="drawerClose" onclick="closeDrawer()">✕</button>
     </div>
+    <nav class="drawer-list">
+      <!-- 成果物はここに追加していく -->
+      <a class="drawer-item" href="motion-names-24.html">
+        <div class="name">AIでアプリを作る時に使う、動きの名前24 — インタラクティブ図鑑</div>
+        <div class="date">2026年11月23日</div>
+      </a>
+    </nav>
+    <div class="drawer-foot">タップすると開きます</div>
+  </aside>
 
-  </div>
+  <script>
+    function openDrawer() {
+      document.getElementById('drawerOverlay').classList.add('open');
+      document.getElementById('drawerPanel').classList.add('open');
+    }
+    function closeDrawer() {
+      document.getElementById('drawerOverlay').classList.remove('open');
+      document.getElementById('drawerPanel').classList.remove('open');
+    }
+  </script>
 </body>
 </html>
